@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Generador de prompts en ingles para videos con Seedance, Veo, Kling, Runway, Pika y otros modelos."
+    />
+    <title>Prompt Studio IA Video</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="assistant-sidebar" aria-label="Asistente Lía">
+        <div class="assistant-header">
+          <div>
+            <p class="eyebrow">Asistente estrategico</p>
+            <h2>Lía</h2>
+          </div>
+          <span class="assistant-badge">L</span>
+        </div>
+
+        <div class="assistant-feed" id="assistantMessages" aria-live="polite"></div>
+
+        <div class="assistant-actions">
+          <button id="applyAssistantPromptBtn" type="button" disabled>
+            Usar prompt acordado
+          </button>
+        </div>
+
+        <form class="assistant-composer" id="assistantForm">
+          <label class="field">
+            <span>Mensaje a Lía</span>
+            <textarea
+              id="assistantInput"
+              placeholder="Ej. Quiero un anuncio UGC para una crema facial premium, tono natural y muy vendible."
+            ></textarea>
+          </label>
+          <button class="primary" id="assistantSendBtn" type="submit">
+            Enviar a Lía
+          </button>
+        </form>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Prompt Studio IA Video</p>
+            <h1>Generador de prompts para videos con IA</h1>
+          </div>
+          <div class="status-pill" id="status">Listo para generar.</div>
+        </header>
+
+        <section class="production-bar" aria-label="Contexto de produccion">
+          <div class="production-selector">
+            <span>Proyecto</span>
+            <div>
+              <select id="projectSelect" aria-label="Proyecto activo"></select>
+              <button id="newProjectQuickBtn" type="button">Nuevo</button>
+            </div>
+          </div>
+          <div class="production-selector">
+            <span>Video</span>
+            <div>
+              <select id="videoSelect" aria-label="Video activo" disabled></select>
+              <button id="newVideoBtn" type="button" disabled>Nuevo</button>
+            </div>
+          </div>
+          <div class="production-selector">
+            <span>Escena</span>
+            <div>
+              <select id="sceneSelect" aria-label="Escena activa" disabled></select>
+              <button class="primary" id="newSceneBtn" type="button" disabled>Nuevo</button>
+            </div>
+          </div>
+          <button class="manage-projects" id="openProjectsBtn" type="button">
+            Gestionar
+          </button>
+        </section>
+
+        <div class="workspace-tabs" role="tablist" aria-label="Vista de trabajo">
+          <button data-workspace-view="project" role="tab" type="button">
+            Proyecto
+          </button>
+          <button data-workspace-view="video" role="tab" type="button">
+            Video
+          </button>
+          <button data-workspace-view="scene" role="tab" type="button">
+            Escena
+          </button>
+        </div>
+
+        <section class="workspace-view" id="projectView">
+          <div class="panel project-summary-panel">
+            <div class="result-header">
+              <div class="panel-heading">
+                <span class="mark">01</span>
+                <h2>Detalles del proyecto</h2>
+              </div>
+              <button id="editProjectTabBtn" type="button">Editar</button>
+            </div>
+            <div class="context-details" id="projectDetails"></div>
+          </div>
+        </section>
+
+        <section class="workspace-view" id="videoView">
+          <div class="panel">
+            <div class="result-header">
+              <div class="panel-heading">
+                <span class="mark">02</span>
+                <h2>Plan del video</h2>
+              </div>
+              <button id="createVideoPlanBtn" type="button">
+                Crear con asistente
+              </button>
+            </div>
+            <p class="view-empty" id="videoDetailsEmpty">
+              Selecciona un video para guardar su objetivo y su plan maestro.
+            </p>
+            <form class="hidden" id="videoDetailsForm">
+              <label class="field">
+                <span>Nombre del video</span>
+                <input id="videoDetailsTitle" required />
+              </label>
+              <div class="two-cols">
+                <label class="field">
+                  <span>Objetivo</span>
+                  <input id="videoDetailsObjective" placeholder="Ej. Conseguir leads" />
+                </label>
+                <label class="field">
+                  <span>Plataforma</span>
+                  <input id="videoDetailsPlatform" placeholder="Ej. Reels 9:16" />
+                </label>
+              </div>
+              <label class="field">
+                <span>CTA</span>
+                <input id="videoDetailsCta" placeholder="Ej. Agenda tu clase prueba" />
+              </label>
+              <label class="field">
+                <span>Plan maestro del video</span>
+                <textarea
+                  class="video-plan"
+                  id="videoDetailsPlan"
+                  placeholder="Pega aqui la estructura completa: escenas, hooks, guiones, textos en pantalla, recomendaciones y orden narrativo."
+                ></textarea>
+              </label>
+              <button class="primary" type="submit">Guardar video</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="workspace-view" id="sceneView">
+        <section class="builder-grid">
+          <div class="panel">
+            <div class="panel-heading">
+              <span class="mark">01</span>
+              <h2>Escena</h2>
+            </div>
+
+            <label class="field">
+              <span>Idea o guion</span>
+              <textarea id="idea"></textarea>
+            </label>
+
+            <div class="segmented" aria-label="Tipo de entrada">
+              <button class="active" data-input-kind="script" type="button">
+                Guion exacto
+              </button>
+              <button data-input-kind="idea" type="button">Idea libre</button>
+            </div>
+
+            <div class="quick-actions">
+              <button id="exampleBtn" type="button">Ejemplo</button>
+              <button id="autoSettingsBtn" type="button">Configurar IA</button>
+              <button id="resetBtn" type="button">Limpiar</button>
+            </div>
+
+            <div class="two-cols">
+              <label class="field">
+                <span>Modelo video</span>
+                <select id="targetModel"></select>
+              </label>
+              <label class="field">
+                <span>Formato</span>
+                <select id="format"></select>
+              </label>
+            </div>
+
+            <div class="two-cols">
+              <label class="field">
+                <span>Modo</span>
+                <select id="mode">
+                  <option value="image_to_video">Imagen a video</option>
+                  <option value="text_to_video">Texto a video</option>
+                  <option value="image_edit">Retoque imagen</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Camara</span>
+                <select id="camera"></select>
+              </label>
+            </div>
+          </div>
+
+          <aside class="panel">
+            <div class="panel-heading">
+              <span class="mark">02</span>
+              <h2>Opciones</h2>
+            </div>
+
+            <div class="two-cols">
+              <label class="field">
+                <span>Duracion</span>
+                <select id="duration"></select>
+              </label>
+              <label class="field">
+                <span>Formato video</span>
+                <select id="aspectRatio"></select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Estilo visual</span>
+              <select id="visualStyle"></select>
+            </label>
+
+            <div class="two-cols">
+              <label class="field">
+                <span>Escenario</span>
+                <select id="environment"></select>
+              </label>
+              <label class="field">
+                <span>Luz</span>
+                <select id="lighting"></select>
+              </label>
+            </div>
+
+            <div class="two-cols">
+              <label class="field">
+                <span>Gesto</span>
+                <select id="action"></select>
+              </label>
+              <label class="field">
+                <span>Momento gesto</span>
+                <select id="actionTiming">
+                  <option value="before">Antes de hablar</option>
+                  <option value="during">Mientras habla</option>
+                  <option value="after">Despues de hablar</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="two-cols">
+              <label class="field">
+                <span>Voz</span>
+                <select id="voice"></select>
+              </label>
+              <label class="field" id="accentWrap">
+                <span>Idioma/acento</span>
+                <select id="accent"></select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Música de fondo</span>
+              <select id="backgroundMusic"></select>
+            </label>
+
+            <label class="field hidden" id="customVoiceWrap">
+              <span>Descripcion de voz</span>
+              <input id="customVoice" placeholder="Voice: a warm female voice..." />
+            </label>
+
+            <label class="field hidden" id="speakerSideWrap">
+              <span>Persona que habla</span>
+              <select id="speakerSide">
+                <option value="left">Izquierda</option>
+                <option value="right">Derecha</option>
+              </select>
+            </label>
+
+            <label class="field hidden" id="productSurfaceWrap">
+              <span>Superficie producto</span>
+              <input id="productSurface" />
+            </label>
+
+            <label class="field hidden" id="skincareAreaWrap">
+              <span>Zona skincare</span>
+              <select id="skincareArea"></select>
+            </label>
+          </aside>
+        </section>
+
+        <section class="output-grid">
+          <div class="panel">
+            <div class="panel-heading">
+              <span class="mark">03</span>
+              <h2>Reglas finas</h2>
+            </div>
+
+            <div class="toggles">
+              <label class="toggle">
+                <input id="includeAntiCut" type="checkbox" />
+                <span>Toma continua sin cortes</span>
+              </label>
+              <label class="toggle">
+                <input id="preserveIdentity" type="checkbox" />
+                <span>Mantener identidad</span>
+              </label>
+              <label class="toggle">
+                <input id="preserveProduct" type="checkbox" />
+                <span>Mantener etiqueta producto</span>
+              </label>
+              <label class="toggle">
+                <input id="naturalGestures" type="checkbox" />
+                <span>Gestos naturales</span>
+              </label>
+              <label class="toggle">
+                <input id="clearLipSync" type="checkbox" />
+                <span>Lip sync claro</span>
+              </label>
+              <label class="toggle">
+                <input id="negativeGuards" type="checkbox" />
+                <span>Evitar errores comunes</span>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Notas extra</span>
+              <textarea
+                class="small-textarea"
+                id="extraNotes"
+                placeholder="Ej. que la etiqueta nunca se deforme, tono mas premium..."
+              ></textarea>
+            </label>
+
+            <div class="segmented" aria-label="Nivel de detalle">
+              <button class="active" data-detail-level="detailed" type="button">
+                Detallado
+              </button>
+              <button data-detail-level="compact" type="button">Compacto</button>
+            </div>
+
+            <label class="field">
+              <span>Modelo ChatGPT</span>
+              <select id="chatModel">
+                <option value="gpt-5.6-luna">GPT-5.6 Luna - rapido</option>
+                <option value="gpt-5.6-terra">GPT-5.6 Terra - balance</option>
+                <option value="gpt-5.6-sol">GPT-5.6 Sol - maxima calidad</option>
+                <option value="chat-latest">Chat latest - alias ChatGPT</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="panel result-panel">
+            <div class="result-header">
+              <div class="panel-heading">
+                <span class="mark">04</span>
+                <h2>Prompt en ingles</h2>
+              </div>
+              <div class="result-actions">
+                <button id="localBtn" type="button">Local</button>
+                <button class="primary" id="aiBtn" type="button">ChatGPT</button>
+                <button id="copyBtn" type="button">Copiar</button>
+              </div>
+            </div>
+
+            <textarea
+              aria-label="Prompt generado"
+              class="output"
+              id="output"
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </section>
+        </section>
+      </section>
+    </main>
+
+    <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
+
+    <dialog class="projects-dialog" id="projectsDialog">
+      <div class="projects-dialog-header">
+        <div>
+          <p class="eyebrow">Produccion</p>
+          <h2>Proyectos y videos</h2>
+        </div>
+        <button id="closeProjectsBtn" type="button">Cerrar</button>
+      </div>
+
+      <div class="projects-layout">
+        <aside class="projects-list" id="projectsList" aria-label="Lista de proyectos"></aside>
+
+        <div class="project-editor">
+          <div class="editor-heading">
+            <h2 id="projectEditorTitle">Nuevo proyecto</h2>
+            <button id="newProjectBtn" type="button">Nuevo proyecto</button>
+          </div>
+
+          <form id="projectForm">
+            <label class="field">
+              <span>Nombre del proyecto</span>
+              <input id="projectName" required placeholder="Ej. BDKGYM" />
+            </label>
+            <label class="field">
+              <span>Que es el producto o servicio</span>
+              <textarea class="small-textarea" id="projectDescription" placeholder="Describe el negocio, producto, diferenciadores y elementos visuales importantes."></textarea>
+            </label>
+            <div class="two-cols">
+              <label class="field">
+                <span>Audiencia</span>
+                <input id="projectAudience" placeholder="Ej. Adultos de 25 a 45 anos" />
+              </label>
+              <label class="field">
+                <span>Oferta principal</span>
+                <input id="projectOffer" placeholder="Ej. Inscripcion sin costo" />
+              </label>
+            </div>
+            <label class="field">
+              <span>Tono de marca</span>
+              <input id="projectTone" placeholder="Ej. Cercano, energetico y motivador" />
+            </label>
+            <label class="field">
+              <span>Reglas y restricciones</span>
+              <textarea class="small-textarea" id="projectRestrictions" placeholder="Claims aprobados, palabras prohibidas, logo, etiqueta o restricciones legales."></textarea>
+            </label>
+            <button class="primary" type="submit">Guardar proyecto</button>
+          </form>
+
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="video-dialog" id="videoDialog">
+      <div class="video-dialog-header">
+        <div>
+          <p class="eyebrow">Nuevo video</p>
+          <h2 id="videoDialogProject">Proyecto activo</h2>
+        </div>
+        <button id="closeVideoBtn" type="button">Cerrar</button>
+      </div>
+      <form class="video-form" id="videoForm">
+        <label class="field">
+          <span>Nombre del video</span>
+          <input id="videoTitle" required placeholder="Ej. Campana de inscripciones" />
+        </label>
+        <div class="two-cols">
+          <label class="field">
+            <span>Objetivo</span>
+            <input id="videoObjective" placeholder="Ej. Conseguir leads" />
+          </label>
+          <label class="field">
+            <span>Plataforma</span>
+            <input id="videoPlatform" placeholder="Ej. Reels 9:16" />
+          </label>
+        </div>
+        <label class="field">
+          <span>CTA</span>
+          <input id="videoCta" placeholder="Ej. Agenda tu clase prueba" />
+        </label>
+        <button class="primary" type="submit">Crear video</button>
+      </form>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

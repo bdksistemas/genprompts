@@ -1,0 +1,312 @@
+# Biblioteca de Prompts
+
+> Las piezas que combinas para montar cualquier vídeo, y cómo armar cada formato. Copia, pega y dispara.
+
+---
+
+## PARTE A · Las piezas
+
+---
+
+### 1. Cómo se monta el prompt (para vídeo)
+
+**Qué es:** la estructura base de un prompt de vídeo. Juntas estas piezas en este orden (la acción es opcional):
+
+| PIEZA | EN EL EJEMPLO |
+|---|---|
+| 1 · Cámara — un plano de la sección 5, o `static camera, no movement` | `(static camera, no movement) realistic arm movements and subtle micro-movements.` |
+| 2 · Acción *(opcional)* — un gesto (sección 4) | `She smiles and holds up the product,` |
+| 3 · Guión — lo que dice | `then says: "Llevaba meses buscando algo así y mira, lo encontré."` |
+| 4 · Voz — de la sección 3 | `Voice: a light, lively female voice — a woman in her mid-20s, bright and clear, warm and friendly, natural conversational pace.` |
+| 5 · Acento — por si lo quieres en español, argentino, colombiano, mexicano… (sección 2) | `Spanish with a neutral Peninsular (Madrid) accent, informal and conversational, like a real casual chat in Spain.` |
+
+**Ejemplo del prompt completo:**
+(static camera, no movement) realistic arm movements and subtle micro-movements. She smiles and holds up the product, then says: "Llevaba meses buscando algo así y mira, lo encontré."
+Voice: a light, lively female voice — a woman in her mid-20s, bright and clear, warm and friendly, natural conversational pace.
+Spanish with a neutral Peninsular (Madrid) accent, informal and conversational, like a real casual chat in Spain.
+
+> Si el vídeo es en inglés, te saltas el paso 5 (el acento).
+
+---
+
+### 2. El idioma y los acentos
+
+**Para qué:** hacer que la persona hable en el idioma o acento que quieras. Añade una de estas líneas al final de cualquier prompt que lleve voz.
+
+**España — peninsular, Madrid neutro**
+Spanish with a neutral Peninsular (Madrid) accent, informal and conversational, like a real casual chat in Spain.
+
+**Argentina — rioplatense (Buenos Aires)**
+Spanish with an Argentine Rioplatense (Buenos Aires) accent, including the typical "sh" sound for "ll" and "y".
+
+**Colombia — bogotano**
+Spanish with a clear, neutral Colombian (Bogotá) accent.
+
+**México — central (CDMX)**
+Spanish with a Mexican (central, Mexico City) accent.
+
+**Latinoamérica — neutro**
+Spanish with a neutral Latin American accent.
+
+---
+
+### 3. La voz
+
+**Para qué:** que cada personaje tenga una voz reconocible y maximizar las posibilidades de que suene lo más parecida posible en todos sus clips (no es una solución perfecta, es un parche). Usa la misma línea `Voice:` en cada clip del personaje y genéralos en la misma sesión.
+
+**Hombre mayor · ~50**
+Voice: a deep, warm male voice — a man in his early-to-mid 50s, low and resonant with a slight gravelly texture, calm and unhurried, confident and grounded.
+
+**Hombre joven · ~25-30**
+Voice: a bright, energetic male voice — a guy in his mid-to-late 20s, medium-high pitch, clear and relaxed, friendly and upbeat, casual conversational pace.
+
+**Hombre · mediados de los 20**
+Voice: a youthful male voice — a guy in his mid-20s, bright and fairly high-pitched, light and energetic, casual relaxed pace.
+
+**Hombre · mediados de los 30**
+Voice: a male voice in his mid-30s, medium pitch, a bit fuller and more settled than a twenty-something, calm and confident, friendly but grounded.
+
+**Mujer mayor · ~50**
+Voice: a warm, mature female voice — a woman in her early 50s, rich and slightly smoky lower-mid tone, calm and measured pacing, confident and reassuring.
+
+**Mujer joven · ~25-30**
+Voice: a light, lively female voice — a woman in her mid-20s, bright and clear with a higher pitch, warm and friendly, natural conversational pace.
+
+**Mujer · mediados de los 20**
+Voice: a youthful female voice — a woman in her mid-20s, bright and fairly high-pitched, light and breezy, casual relaxed pace.
+
+**Mujer · mediados de los 30**
+Voice: a female voice in her mid-30s, medium pitch, a bit fuller and more settled than a twenty-something, calm and confident, warm but grounded.
+
+> **Fórmula para crear cualquier voz:**
+> género + edad (`in his/her 20s / 40s / 60s`) + gravedad (`deep, low` o `bright, high`) + textura (`gravelly, raspy` / `smooth, clean` / `soft, breathy`) + entrega (`calm and slow` / `energetic and fast` / `warm` / `authoritative`)
+
+---
+
+### 4. Las micro-acciones (gestos)
+
+**Para qué:** un gesto natural que da realismo. Ojo: es un gesto, NO es lo que dice (eso es el guión). Por eso muchas van antes de hablar.
+
+**La regla:** la acción de antes de hablar va delante del `says:`; la de mientras habla va detrás.
+
+**Antes de hablar (la acción va delante del says:):**
+The person [acción], then looks at the camera and says: "[guión]"
+
+**Mientras o después de hablar (la acción va detrás del says:):**
+The person says: "[guión]" [acción]
+
+**Ejemplos de gestos en inglés:**
+
+| Gesto | Inglés |
+|---|---|
+| Recolocarse la gorra | `adjusts their cap` |
+| Dar un sorbo de café | `takes a sip of coffee and sets the cup down` |
+| Tocarse el pelo | `fixes their hair` (antes) · `while fixing their hair` (mientras) |
+| Saludar | `waves hello` |
+| Reírse | `laughs` (antes) · `and then laughs` (después) |
+| Cara de sorpresa | `with a surprised look on their face` |
+| Asentir | `and nods slowly, smiling` |
+| Señalar arriba | `points up` |
+| Señalar izquierda | `points to the left` |
+| Señalar derecha | `points to the right` |
+
+> Puedes combinar las dos: `The person adjusts their cap, then says: "[guión]" and smiles.`
+
+#### Aplicar una crema o sérum (importante para skincare)
+
+> ⚠️ **Importante:** En la mayoría de ocasiones, la IA animará correctamente el movimiento de la mano, pero la crema permanecerá estática sobre la piel sin extenderse ni desaparecer. Esto genera resultados poco realistas, especialmente en anuncios de skincare. Para evitar este problema, añade siempre una instrucción similar a la siguiente.
+
+**Prompt base:**
+While speaking, she gradually blends the visible cream into the [aquí el sitio] until it is smoothly absorbed into the skin. The amount of visible cream continuously decreases throughout the clip, leaving no residue, streaks, or buildup.
+
+**Ejemplo (contorno de ojos):**
+While speaking, she gradually blends the visible cream into the under-eye area until it is smoothly absorbed into the skin. The amount of visible cream continuously decreases throughout the clip, leaving no residue, streaks, or buildup.
+
+**Mejillas:**
+While speaking, she gradually blends the visible cream into her cheeks until it is smoothly absorbed into the skin. The amount of visible cream continuously decreases throughout the clip, leaving no residue, streaks, or buildup.
+
+**Frente:**
+While speaking, she gradually blends the visible cream into her forehead until it is smoothly absorbed into the skin. The amount of visible cream continuously decreases throughout the clip, leaving no residue, streaks, or buildup.
+
+**Cuello:**
+While speaking, she gradually blends the visible cream into her neck until it is smoothly absorbed into the skin. The amount of visible cream continuously decreases throughout the clip, leaving no residue, streaks, or buildup.
+
+---
+
+### 5. Los movimientos de cámara
+
+**Para qué:** darle vida al plano (acercarse, alejarse, girar…). Los de abajo ya llevan la instrucción para que el modelo no te meta un corte de plano.
+
+**Glosario:**
+- **Zoom in / out** = la cámara se acerca / se aleja
+- **Travelling** = la cámara se desplaza de lado
+- **Órbita** = la cámara gira alrededor de la persona
+- **En mano** = leve temblor natural, como grabado a mano
+- **Plano fijo** = cámara totalmente quieta
+
+#### Los básicos (empieza por estos)
+
+**Plano fijo** — cámara totalmente quieta. El más seguro; ideal para UGC y podcast.
+Locked-off static shot, camera completely still on a tripod, no movement at all. Single continuous take, no cuts or scene changes.
+
+**Zoom lento hacia la cara** — se acerca despacio hasta la cara y se queda quieta. El más socorrido.
+Slow, continuous zoom-in toward the subject's face, starting from the very first frame and moving steadily closer, then holding steady on the close-up for the rest of the clip. Single continuous take, no cuts or scene changes.
+
+**Zoom rápido al empezar a hablar** — acercamiento rápido que cuadra justo cuando empieza la frase, luego se queda quieto. Da energía y engancha.
+Fast zoom-in to the subject's face at the very start, settling into a close-up exactly as they begin to speak, then holding steady. Single continuous take, no cuts or scene changes.
+
+**En mano sutil** — leve temblor natural como grabado a mano. Suma realismo.
+Subtle handheld movement, very slight and natural, for a real human feel without distraction. Single continuous take, no cuts or scene changes.
+
+#### Para variar
+
+**Acercamiento sutil (ideal podcast)** — push-in casi imperceptible, de plano medio a primer plano. Elegante para hablar tranquilo.
+Very gentle, almost imperceptible slow push-in on the speaker, from a medium shot to a medium close-up over the whole clip. Single continuous take, no cuts or scene changes.
+
+**Retroceso que revela el entorno** — se aleja para enseñar el sitio o el producto. Bueno para abrir o para el cierre/CTA.
+Slow pull-back from a close-up, revealing the surrounding environment as the subject starts talking, then holding on the wider shot. Single continuous take, no cuts or scene changes.
+
+**Órbita lenta** — la cámara gira despacio alrededor de la persona (medio círculo). Muy cinematográfico.
+Slow arc shot, the camera orbiting around the subject in a smooth half-circle, subject stays centered. Single continuous take, no cuts or scene changes.
+
+**Seguimiento al caminar** — la cámara sigue a la persona mientras anda y habla.
+Tracking shot following alongside the subject as they walk and talk, smooth and steady. Single continuous take, no cuts or scene changes.
+
+#### Avanzados (vistosos, pero más difíciles de clavar — pruébalos antes de usarlos en serio)
+
+**Push-in dramático a los ojos** — se cierra hasta primerísimo plano de los ojos en la frase clave.
+Slow creeping push-in that tightens into an extreme close-up on the eyes right as the key line is delivered, then holds. Single continuous take, no cuts or scene changes.
+
+**Contrapicado heroico** — desde abajo mirando hacia arriba; da autoridad e impacto.
+Low-angle hero shot looking up at the subject, slow push-in for authority and impact, then holding. Single continuous take, no cuts or scene changes.
+
+**Profundidad de campo (bokeh)** — fondo desenfocado y cremoso, con push-in lento.
+Shallow depth of field with a creamy bokeh background, slow push-in on the in-focus subject, then holding. Single continuous take, no cuts or scene changes.
+
+**Cámara lenta** — entrega a cámara lenta, suave y cinematográfica.
+Slow-motion delivery, smooth and cinematic, with a subtle camera drift. Single continuous take, no cuts or scene changes.
+
+> **Línea anti-corte** (para añadir al final de tu propio prompt si el modelo mete cortes):
+> ```
+> single continuous take, no cuts or scene changes — the camera holds steady on the framing after the move
+> ```
+
+---
+
+### 6. Los retoques de imagen
+
+**Para qué:** preparar la foto antes de animarla. Son cambios sobre la imagen, no llevan voz ni guión.
+
+**Cambiar el avatar** — convertir a la persona en otra distinta
+make this woman/man a different one, [DESCRIPCIÓN, OUTFIT...]
+
+**Reemplazar persona** — con dos archivos de referencia
+replace the guy from the file 1 with the guy from the file 2 wearing the same outfit as in file 2, he is talking to camera gesticulating
+
+**Cambiar el aspecto de la misma persona** — misma cara y persona, pero cambias lo que quieras (encuadre, piel, ropa, sitio)
+
+*La base:*
+Using this image as reference, keep the SAME person — same face and identity — and make [describe lo que quieres: a close-up of their face / them with acne / different clothes / a bathroom background...]. Photorealistic, natural skin texture and lighting.
+
+*Ejemplo montado (cara de cerca, con acné, otra ropa y el baño de fondo):*
+Using this image as reference, keep the SAME person — same face and identity — and make a close-up of their face with visible acne and blemishes, wearing a casual hoodie, in a bathroom. Photorealistic, natural skin texture and lighting.
+
+> Para un **antes/después**: este es el "antes". El "después" es la misma persona con `clear, healthy, glowing skin`. Genera los dos desde la misma imagen para que se note que es la misma persona.
+
+**Plano más cercano** — acercar el encuadre a la cara
+A closer view of this same image shows less countertop. He's talking to the camera, you can see his teeth well
+
+**Cambiar el fondo / escenario** — llevar a la persona a otro sitio sin cambiarla a ella
+Replace the background behind the person with [describe el sitio: a cozy kitchen / a modern office / a neutral studio with soft lighting], keeping the person, their pose, lighting and framing exactly the same. Natural, realistic integration.
+
+**Voltear la imagen** — útil para colocar al segundo interlocutor mirando al otro lado (úsalo en el Podcast)
+Flip the image horizontally
+
+---
+
+## PARTE B · Formatos
+
+---
+
+### 7. UGC (1 persona a cámara)
+
+**Qué es:** una persona hablando a cámara, como cuando te recomienda algo un amigo.
+
+#### Para vídeo — mirando a cámara
+
+**Cámara quieta** — lo más normal en UGC
+(static camera, no movement) he/she's looking directly at the camera, realistic arm movements, clear influencer tone: "[inserta el guión aquí]"
+
+**Con micro-movimientos naturales**
+realistic arm movements, the woman/man says exactly with direct clear energy: "[inserta el guión aquí]"
+
+> Luego añade la **voz** (sección 3), el **acento** (sección 2) y, si quieres, una **micro-acción** (sección 4).
+
+#### Mostrar el producto
+
+Primero preparas la imagen con el producto, luego la animas en vídeo.
+
+**En la imagen** — dale las dos imágenes (avatar + producto)
+
+*Sosteniéndolo, enseñándolo a cámara:*
+Using the two reference images (the person and the product), place the product in the person's hand so they are holding it up and showing it to the camera. Keep the person's face and look unchanged, and keep the product's label and packaging exactly the same. Realistic hands and lighting.
+
+*Señalándolo:*
+Using the two reference images (the person and the product), show the person pointing at the product (held in the other hand or placed next to them) while looking at the camera. Keep the person's face and look unchanged, and keep the product's label and packaging exactly the same. Realistic hands and lighting.
+
+**En el vídeo** — animar esa imagen
+
+*Que lo sostenga y lo enseñe mientras habla:*
+Using the product from the reference image, the person holds the product in one hand and shows it to the camera while talking, looking at the camera with natural, realistic gestures. Keep the product's label and packaging clearly visible and unchanged. Single continuous take, no cuts.
+
+*Que lo señale y lo mire mientras habla:*
+Using the product from the reference image, while talking to the camera the person naturally points at the product and glances down at it a couple of times, then back to the camera, with relaxed, realistic gestures. Keep the product's label and packaging clearly visible and unchanged. Single continuous take, no cuts.
+
+*El producto solo (B-roll, para intercalar):*
+Using the product from the reference image, a clean beauty shot of the product on a [surface: marble counter / wooden table / neutral backdrop], slow gentle camera move, soft natural lighting, the product in sharp focus with its label clearly visible and unchanged. No people. Single continuous take, no cuts.
+
+#### Ejemplo completo de UGC
+The person looks directly at the camera with natural gestures and a clear, friendly influencer tone. Slow zoom-in toward their face from the first frame, holding once close. Single continuous take, no cuts. They say: "[tu guión]"
+Voice: a bright, energetic male voice — a guy in his mid-to-late 20s, clear and relaxed, friendly and upbeat.
+Spanish with a neutral Peninsular (Madrid) accent, informal and conversational, like a real casual chat in Spain.
+
+---
+
+### 8. Podcast (2 personas)
+
+**Qué es:** dos personas charlando a cámara — entrevista o conversación. Generas a cada una por separado y las unes en edición.
+
+**Flujo:** colocas a cada persona mirando hacia el otro lado (para la segunda, voltea la imagen — sección 6), generas a cada una con la cámara quieta y que hable solo ella, le das su voz (sección 3) y, si quieres, una micro-acción (sección 4). Luego las montas en CapCut.
+
+**Que mire al interlocutor** (por si acaso):
+She/he is looking to the right/left side of the frame, as if talking to someone sitting next to her/him.
+
+**Cámara estática, hablando** (lo normal en un podcast):
+(static camera, no movement) the person talks naturally with realistic micro-movements and subtle arm gestures, authentic conversational energy. They say: "[inserta el guión aquí]"
+
+**Que hable solo una persona** (añade esto si el modelo hace hablar a alguien del fondo):
+Single speaker: only the person from the reference image talks.
+
+> **Consistencia de voz (clave):** usa la misma descripción de voz (sección 3) en cada clip del mismo personaje y genéralos en la misma sesión. Si son dos del mismo sexo, descríbeles voces bien distintas (edad, gravedad) para que no suenen iguales.
+
+---
+
+### 9. Dualcast (2 personas)
+
+**Qué es:** el formato nuevo — las dos personas en la misma imagen (un solo plano con las dos en cuadro), interactuando. Partes de una imagen con las dos personas y le dices a cuál quieres que hable; la otra escucha y reacciona.
+
+**Habla la persona de la IZQUIERDA:**
+The person on the LEFT is actively speaking in a natural conversation.
+[script here]
+[action here] -> optional
+The person on the RIGHT is only listening, occasionally nodding slightly, reacting naturally and looking at HIM/HER while he/she talks. Casual realistic interaction, subtle facial reactions, authentic conversational energy, no interruption.
+
+**Habla la persona de la DERECHA:**
+The person on the RIGHT is actively speaking in a natural conversation.
+[script here]
+[action here] -> optional
+The person on the LEFT is only listening, occasionally nodding slightly, reacting naturally and looking at HIM/HER while he/she talks. Casual realistic interaction, subtle facial reactions, authentic conversational energy, no interruption.
+
+> **Recuerda:** los prompts en inglés funcionan mejor para dirigir el modelo; el español va en el guión (lo que dice la persona) y en el bloque de idioma/acento.
+
+---
