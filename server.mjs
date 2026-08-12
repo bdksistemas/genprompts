@@ -1,12 +1,14 @@
 import { createServer } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
+const publicRoot = resolve(publicDir);
 const dataDir = join(root, "data");
 const studioFile = join(dataDir, "studio.json");
 const promptLibraryFile = join(root, "ESTRUCTURA-PROMPTS.txt");
@@ -47,6 +49,22 @@ function loadDotEnv() {
 loadDotEnv();
 
 const port = Number(process.env.PORT || 3000);
+const appUsername = process.env.APP_USERNAME || "admin";
+const appPassword = process.env.APP_PASSWORD || "";
+const isProduction = process.env.NODE_ENV === "production";
+const maxJsonBodyBytes = Number(process.env.MAX_JSON_BODY_BYTES || 1_000_000);
+const maxUpstreamBodyBytes = Number(process.env.MAX_UPSTREAM_BODY_BYTES || 2_000_000);
+const openAiTimeoutMs = Number(process.env.OPENAI_TIMEOUT_MS || 60_000);
+const rateLimitPerMinute = Number(process.env.RATE_LIMIT_PER_MINUTE || 120);
+const rateLimitBuckets = new Map();
+
+if (isProduction && !appPassword) {
+  throw new Error("Configura APP_PASSWORD antes de iniciar en produccion.");
+}
+
+if (!appPassword) {
+  console.warn("APP_PASSWORD no esta configurado; la app queda sin autenticacion.");
+}
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -64,12 +82,138 @@ const allowedModels = new Set([
   "chat-latest"
 ]);
 
+const allowedOrigins = new Set([
+  process.env.APP_ORIGIN,
+  "https://prompts.serverbdk.com",
+  `http://localhost:${port}`,
+  `http://127.0.0.1:${port}`
+].filter(Boolean));
+
+const securityHeaders = {
+  "Content-Security-Policy":
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Origin-Agent-Cluster": "?1",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  "Referrer-Policy": "same-origin",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY"
+};
+
+function responseHeaders(headers = {}) {
+  return {
+    ...securityHeaders,
+    ...(isProduction
+      ? { "Strict-Transport-Security": "max-age=31536000; includeSubDomains" }
+      : {}),
+    ...headers
+  };
+}
+
 function sendJson(response, status, payload) {
   response.writeHead(status, {
+    ...responseHeaders(),
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store"
   });
   response.end(JSON.stringify(payload));
+}
+
+function sendText(response, status, text, headers = {}) {
+  response.writeHead(status, {
+    ...responseHeaders(headers),
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "no-store"
+  });
+  response.end(text);
+}
+
+function createHttpError(status, message) {
+  const error = new Error(message);
+  error.statusCode = status;
+  return error;
+}
+
+function sendError(response, error, fallbackMessage) {
+  const status = Number(error?.statusCode || 500);
+  sendJson(response, status, {
+    error: status >= 500 ? fallbackMessage : error.message || fallbackMessage
+  });
+}
+
+function safeCompare(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  );
+}
+
+function isAuthorized(request) {
+  if (!appPassword) {
+    return true;
+  }
+
+  const authorization = request.headers.authorization || "";
+  const [scheme, encoded] = authorization.split(" ");
+  if (scheme !== "Basic" || !encoded) {
+    return false;
+  }
+
+  let username = "";
+  let password = "";
+  try {
+    const decoded = Buffer.from(encoded, "base64").toString("utf8");
+    const separator = decoded.indexOf(":");
+    username = separator >= 0 ? decoded.slice(0, separator) : "";
+    password = separator >= 0 ? decoded.slice(separator + 1) : "";
+  } catch {
+    return false;
+  }
+
+  return safeCompare(username, appUsername) && safeCompare(password, appPassword);
+}
+
+function sendUnauthorized(response) {
+  response.writeHead(401, {
+    ...responseHeaders({
+      "WWW-Authenticate": 'Basic realm="Prompt Studio", charset="UTF-8"'
+    }),
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "no-store"
+  });
+  response.end("Authentication required");
+}
+
+function verifyOrigin(request) {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method || "")) {
+    return;
+  }
+
+  const origin = request.headers.origin;
+  if (origin && !allowedOrigins.has(origin)) {
+    throw createHttpError(403, "Origen no permitido.");
+  }
+}
+
+function isRateLimited(request) {
+  if (!rateLimitPerMinute) {
+    return false;
+  }
+
+  const now = Date.now();
+  const key = request.socket.remoteAddress || "unknown";
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + 60_000 });
+    return false;
+  }
+
+  bucket.count += 1;
+  return bucket.count > rateLimitPerMinute;
 }
 
 function loadExtraCa() {
@@ -94,11 +238,26 @@ function loadExtraCa() {
 const extraCa = loadExtraCa();
 
 async function readJson(request) {
+  const contentType = request.headers["content-type"] || "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw createHttpError(415, "Usa Content-Type application/json.");
+  }
+
   const chunks = [];
+  let totalBytes = 0;
   for await (const chunk of request) {
+    totalBytes += chunk.length;
+    if (totalBytes > maxJsonBodyBytes) {
+      throw createHttpError(413, "La solicitud es demasiado grande.");
+    }
     chunks.push(chunk);
   }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw createHttpError(400, "JSON invalido.");
+  }
 }
 
 function cleanText(value, maxLength = 12000) {
@@ -183,14 +342,23 @@ async function handleStudio(request, response) {
 
     response.writeHead(405);
     response.end("Method not allowed");
-  } catch {
-    sendJson(response, 500, { error: "No se pudo guardar el estudio local." });
+  } catch (error) {
+    sendError(response, error, "No se pudo guardar el estudio local.");
   }
 }
 
 function postOpenAiResponses(payload) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify(payload);
+    let settled = false;
+    const fail = (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(error);
+    };
+
     const request = httpsRequest(
       {
         hostname: "api.openai.com",
@@ -205,12 +373,23 @@ function postOpenAiResponses(payload) {
       },
       (apiResponse) => {
         const chunks = [];
+        let totalBytes = 0;
 
         apiResponse.on("data", (chunk) => {
+          totalBytes += chunk.length;
+          if (totalBytes > maxUpstreamBodyBytes) {
+            fail(createHttpError(502, "La respuesta de OpenAI excedio el limite permitido."));
+            request.destroy();
+            return;
+          }
           chunks.push(chunk);
         });
 
         apiResponse.on("end", () => {
+          if (settled) {
+            return;
+          }
+          settled = true;
           const text = Buffer.concat(chunks).toString("utf8");
           let payloadJson = {};
 
@@ -231,7 +410,11 @@ function postOpenAiResponses(payload) {
       }
     );
 
-    request.on("error", reject);
+    request.setTimeout(openAiTimeoutMs, () => {
+      fail(createHttpError(504, "OpenAI tardo demasiado en responder."));
+      request.destroy();
+    });
+    request.on("error", fail);
     request.write(body);
     request.end();
   });
@@ -366,12 +549,7 @@ async function handleSuggestSettings(request, response) {
       model
     });
   } catch (error) {
-    sendJson(response, 500, {
-      error:
-        error instanceof Error
-          ? error.message
-          : "No se pudo configurar la escena con IA."
-    });
+    sendError(response, error, "No se pudo configurar la escena con IA.");
   }
 }
 
@@ -437,12 +615,7 @@ async function handleGeneratePrompt(request, response) {
       model
     });
   } catch (error) {
-    sendJson(response, 500, {
-      error:
-        error instanceof Error
-          ? error.message
-          : "No se pudo generar el prompt con IA."
-    });
+    sendError(response, error, "No se pudo generar el prompt con IA.");
   }
 }
 
@@ -538,67 +711,88 @@ ${JSON.stringify(contextForAssistant, null, 2)}`;
       model
     });
   } catch (error) {
-    sendJson(response, 500, {
-      error:
-        error instanceof Error
-          ? error.message
-          : "No se pudo conversar con el asistente."
-    });
+    sendError(response, error, "No se pudo conversar con el asistente.");
   }
 }
 
 async function serveStatic(request, response) {
-  const url = new URL(request.url || "/", "http://localhost");
-  const rawPath = url.pathname === "/" ? "/index.html" : url.pathname;
-  const safePath = normalize(decodeURIComponent(rawPath)).replace(/^(\.\.[/\\])+/, "");
-  const filePath = join(publicDir, safePath);
+  let filePath = "";
 
-  if (!filePath.startsWith(publicDir)) {
-    response.writeHead(403);
-    response.end("Forbidden");
+  try {
+    const url = new URL(request.url || "/", "http://localhost");
+    const rawPath = url.pathname === "/" ? "/index.html" : url.pathname;
+    const decodedPath = decodeURIComponent(rawPath);
+    filePath = resolve(publicRoot, `.${decodedPath}`);
+  } catch {
+    sendText(response, 400, "Bad request");
+    return;
+  }
+
+  if (filePath !== publicRoot && !filePath.startsWith(`${publicRoot}${sep}`)) {
+    sendText(response, 403, "Forbidden");
     return;
   }
 
   try {
     const data = await readFile(filePath);
     response.writeHead(200, {
-      "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream"
+      ...responseHeaders(),
+      "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream",
+      "Cache-Control": extname(filePath) === ".html" ? "no-store" : "public, max-age=3600"
     });
-    response.end(data);
+    response.end(request.method === "HEAD" ? undefined : data);
   } catch {
-    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Not found");
+    sendText(response, 404, "Not found");
   }
 }
 
 const server = createServer((request, response) => {
-  if (request.url === "/api/studio" && ["GET", "PUT"].includes(request.method || "")) {
-    handleStudio(request, response);
+  let pathname = "/";
+
+  try {
+    pathname = new URL(request.url || "/", "http://localhost").pathname;
+    verifyOrigin(request);
+  } catch (error) {
+    sendError(response, error, "Solicitud invalida.");
     return;
   }
 
-  if (request.method === "POST" && request.url === "/api/assistant-chat") {
-    handleAssistantChat(request, response);
+  if (!isAuthorized(request)) {
+    sendUnauthorized(response);
     return;
   }
 
-  if (request.method === "POST" && request.url === "/api/suggest-settings") {
-    handleSuggestSettings(request, response);
+  if (pathname.startsWith("/api/") && isRateLimited(request)) {
+    sendJson(response, 429, { error: "Demasiadas solicitudes. Intenta de nuevo en un minuto." });
     return;
   }
 
-  if (request.method === "POST" && request.url === "/api/generate-prompt") {
-    handleGeneratePrompt(request, response);
+  if (pathname === "/api/studio" && ["GET", "PUT"].includes(request.method || "")) {
+    void handleStudio(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/assistant-chat") {
+    void handleAssistantChat(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/suggest-settings") {
+    void handleSuggestSettings(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/generate-prompt") {
+    void handleGeneratePrompt(request, response);
     return;
   }
 
   if (request.method === "GET" || request.method === "HEAD") {
-    serveStatic(request, response);
+    void serveStatic(request, response);
     return;
   }
 
-  response.writeHead(405);
-  response.end("Method not allowed");
+  sendText(response, 405, "Method not allowed");
 });
 
 server.listen(port, () => {
