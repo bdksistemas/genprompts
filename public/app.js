@@ -765,13 +765,29 @@ async function createVideo(event) {
   }
 }
 
+function readVideoDetailsForm(video) {
+  const title = clean($("videoDetailsTitle").value);
+  if (!video || !title) {
+    return false;
+  }
+
+  Object.assign(video, {
+    title,
+    objective: clean($("videoDetailsObjective").value),
+    platform: clean($("videoDetailsPlatform").value),
+    cta: clean($("videoDetailsCta").value),
+    plan: String($("videoDetailsPlan").value || "").trim(),
+    updatedAt: now()
+  });
+  return true;
+}
+
 async function saveVideoDetails(event) {
   event.preventDefault();
   const button = event.submitter;
   const originalText = button?.textContent || "";
   const video = currentVideo();
-  const title = clean($("videoDetailsTitle").value);
-  if (!video || !title) {
+  if (!readVideoDetailsForm(video)) {
     setStatus("Escribe el nombre del video.");
     return;
   }
@@ -782,14 +798,6 @@ async function saveVideoDetails(event) {
   }
 
   try {
-    Object.assign(video, {
-      title,
-      objective: clean($("videoDetailsObjective").value),
-      platform: clean($("videoDetailsPlatform").value),
-      cta: clean($("videoDetailsCta").value),
-      plan: String($("videoDetailsPlan").value || "").trim(),
-      updatedAt: now()
-    });
     await saveStudio();
     renderProductionContext();
     setStatus("Video guardado.");
@@ -800,6 +808,44 @@ async function saveVideoDetails(event) {
       button.disabled = false;
       button.textContent = originalText;
     }
+  }
+}
+
+async function extractScriptToCurrentVideo() {
+  const button = $("extractScriptBtn");
+  const originalText = button.textContent;
+  const video = currentVideo();
+  if (!readVideoDetailsForm(video)) {
+    setStatus("Escribe el nombre del video antes de extraer el guion.");
+    return;
+  }
+
+  if (!clean(video.plan)) {
+    setStatus("Pega o crea el plan maestro antes de extraer el guion.");
+    return;
+  }
+
+  const extractedScript = extractScriptFromVideoPlan(video.plan);
+  if (!extractedScript) {
+    setStatus("No encontre lineas de guion en el plan maestro.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Extrayendo";
+
+  try {
+    video.script = extractedScript;
+    video.updatedAt = now();
+    await saveStudio();
+    renderProductionContext();
+    renderScriptDetails();
+    setStatus("Guion extraido y guardado en la pestaña Guion.");
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "No se pudo guardar el guion extraido.");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
   }
 }
 
@@ -1366,17 +1412,30 @@ function stripPlanMarkup(text) {
     .trim();
 }
 
+function cleanExtractedScriptText(text) {
+  return stripPlanMarkup(text)
+    .replace(
+      /\s*(?:[-\u2013\u2014|]\s*)?[\[(]\s*(?=[^\])]*(?:\b(?:s|seg(?:undo)?s?|cr|cr(?:e|\u00e9)ditos?)\b))[\d.,\s|/+:-]*(?:s|seg(?:undo)?s?|cr|cr(?:e|\u00e9)ditos?)[^\])]*[\])]\s*$/i,
+      ""
+    )
+    .replace(
+      /\s+[-\u2013\u2014|]\s*(?:\d+(?:[.,]\d+)?\s*(?:s|seg(?:undo)?s?)\b(?:\s*[|/,+-]\s*\d+(?:[.,]\d+)?\s*(?:cr|cr(?:e|\u00e9)ditos?)\b)?|\d+(?:[.,]\d+)?\s*(?:cr|cr(?:e|\u00e9)ditos?)\b(?:\s*[|/,+-]\s*\d+(?:[.,]\d+)?\s*(?:s|seg(?:undo)?s?)\b)?)\s*$/i,
+      ""
+    )
+    .trim();
+}
+
 function extractVoiceoverText(line) {
   const text = stripPlanMarkup(line);
   const patterns = [
-    /\b(?:voz\s*en\s*off|voice\s*over|locuci(?:o|\u00f3)n|locutor|audio\s*del\s*locutor|narrador|guion\s*(?:de\s*)?(?:voz|locutor)?)\b\s*[:\-]\s*(.+)$/i,
-    /\b(?:dice|dialogo|di(?:a|\u00e1)logo|texto\s*hablado)\b\s*[:\-]\s*(.+)$/i
+    /\b(?:voz\s*en\s*off|voice\s*over|locuci(?:o|\u00f3)n|locutor|narrador|narraci(?:o|\u00f3)n|audio\s*(?:del\s*)?(?:locutor|voz|narrador)|gui(?:o|\u00f3)n\s*(?:de\s*)?(?:voz|locutor|narrador|hablado|sugerido)?)\b\s*[:\-\u2013\u2014]\s*(.+)$/i,
+    /\b(?:dice|dialogo|di(?:a|\u00e1)logo(?:\s+sugerido)?|frase(?:\s+sugerida)?|texto\s*(?:hablado|para\s*(?:locutor|voz)|de\s*(?:locutor|voz))|copy\s*hablado|mensaje\s*(?:del\s*)?(?:locutor|hablado))\b\s*[:\-\u2013\u2014]\s*(.+)$/i
   ];
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match?.[1]) {
-      return stripPlanMarkup(match[1]);
+      return cleanExtractedScriptText(match[1]);
     }
   }
 
@@ -1392,7 +1451,9 @@ function extractScriptFromVideoPlan(plan) {
     .map(stripPlanMarkup)
     .filter(Boolean)
     .forEach((line) => {
-      const sceneMatch = line.match(/^(?:#{1,6}\s*)?(?:e|escena)\s*0*(\d+)\b[:.\-\s]*(.*)$/i);
+      const sceneMatch = line.match(
+        /^(?:#{1,6}\s*)?(?:(?:\d+)\s*[.)-]\s*)?(?:e|escena)\s*0*(\d+)\b[:.\-\u2013\u2014\s]*(.*)$/i
+      );
       if (sceneMatch) {
         currentSceneNumber = Number(sceneMatch[1]);
         const inlineText = extractVoiceoverText(sceneMatch[2] || "");
@@ -1749,6 +1810,9 @@ async function init() {
   });
   $("videoDetailsForm").addEventListener("submit", (event) => {
     void saveVideoDetails(event);
+  });
+  $("extractScriptBtn").addEventListener("click", () => {
+    void extractScriptToCurrentVideo();
   });
   $("scriptDetailsForm").addEventListener("submit", (event) => {
     void saveScriptDetails(event);
