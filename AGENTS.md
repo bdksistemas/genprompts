@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Project Structure & Module Organization 
 
 This repository is a small local Node.js app for generating AI video prompts.
 

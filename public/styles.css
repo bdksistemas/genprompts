@@ -411,6 +411,34 @@ h2 {
   min-height: 360px;
 }
 
+.script-plan {
+  min-height: 420px;
+}
+
+.script-totals {
+  align-self: end;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  min-height: 69px;
+  padding: 10px 11px;
+}
+
+.script-totals span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.script-totals strong {
+  color: var(--accent-strong);
+  font-size: 16px;
+  line-height: 1.35;
+}
+
 .builder-grid,
 .output-grid {
   display: grid;

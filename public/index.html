@@ -86,6 +86,9 @@
           <button data-workspace-view="video" role="tab" type="button">
             Video
           </button>
+          <button data-workspace-view="script" role="tab" type="button">
+            Guion
+          </button>
           <button data-workspace-view="scene" role="tab" type="button">
             Escena
           </button>
@@ -146,6 +149,41 @@
                 ></textarea>
               </label>
               <button class="primary" type="submit">Guardar video</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="workspace-view" id="scriptView">
+          <div class="panel">
+            <div class="result-header">
+              <div class="panel-heading">
+                <span class="mark">03</span>
+                <h2>Guion de voz en off</h2>
+              </div>
+            </div>
+            <p class="view-empty" id="scriptDetailsEmpty">
+              Selecciona un video para guardar el guion de voz en off y sus costos.
+            </p>
+            <form class="hidden" id="scriptDetailsForm">
+              <label class="field">
+                <span>Guion exclusivo del locutor</span>
+                <textarea
+                  class="script-plan"
+                  id="videoDetailsScript"
+                  placeholder="E1: Texto de voz en off. (6s | 20 cr)"
+                ></textarea>
+              </label>
+              <div class="two-cols">
+                <label class="field">
+                  <span>Costo aproximado en pesos</span>
+                  <input id="videoDetailsScriptCost" inputmode="decimal" placeholder="Ej. 160" />
+                </label>
+                <div class="script-totals" aria-live="polite">
+                  <span>Total calculado</span>
+                  <strong id="scriptTotals">0 creditos | 0 segundos | $0 pesos aprox</strong>
+                </div>
+              </div>
+              <button class="primary" type="submit">Guardar guion</button>
             </form>
           </div>
         </section>

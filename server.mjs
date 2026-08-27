@@ -302,6 +302,8 @@ function sanitizeStudio(value) {
         platform: cleanText(video?.platform, 300),
         cta: cleanText(video?.cta, 1000),
         plan: cleanText(video?.plan, 30000),
+        script: cleanText(video?.script, 30000),
+        scriptCostPesos: cleanText(video?.scriptCostPesos, 100),
         updatedAt: cleanText(video?.updatedAt, 80),
         scenes: (Array.isArray(video?.scenes) ? video.scenes : [])
           .slice(0, 1000)

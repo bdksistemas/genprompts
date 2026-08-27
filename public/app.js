@@ -235,7 +235,8 @@ function getProjectContext() {
           objective: video.objective,
           platform: video.platform,
           cta: video.cta,
-          plan: video.plan
+          plan: video.plan,
+          script: video.script
         }
       : {},
     scene: scene ? { name: scene.name } : {}
@@ -415,6 +416,53 @@ function renderVideoDetails() {
   $("videoDetailsPlan").value = video.plan || "";
 }
 
+function formatNumber(value) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
+}
+
+function calculateScriptTotals(script) {
+  return String(script || "")
+    .split("\n")
+    .filter((line) => !/^\s*total\b/i.test(line))
+    .reduce(
+      (totals, line) => {
+        const secondsMatch = line.match(/(\d+(?:[.,]\d+)?)\s*s\b/i);
+        const creditsMatch = line.match(/(\d+(?:[.,]\d+)?)\s*(?:cr|creditos?)\b/i);
+        if (secondsMatch) {
+          totals.seconds += Number(secondsMatch[1].replace(",", "."));
+        }
+        if (creditsMatch) {
+          totals.credits += Number(creditsMatch[1].replace(",", "."));
+        }
+        return totals;
+      },
+      { credits: 0, seconds: 0 }
+    );
+}
+
+function renderScriptTotals() {
+  const totals = calculateScriptTotals($("videoDetailsScript").value);
+  const cost = clean($("videoDetailsScriptCost").value);
+  $("scriptTotals").textContent = `${formatNumber(totals.credits)} creditos | ${formatNumber(
+    totals.seconds
+  )} segundos | ${cost ? `$${cost}` : "$0"} pesos aprox`;
+}
+
+function renderScriptDetails() {
+  const video = currentVideo();
+  const form = $("scriptDetailsForm");
+  $("scriptDetailsEmpty").classList.toggle("hidden", Boolean(video));
+  form.classList.toggle("hidden", !video);
+
+  if (!video) {
+    return;
+  }
+
+  $("videoDetailsScript").value = video.script || "";
+  $("videoDetailsScriptCost").value = video.scriptCostPesos || "";
+  renderScriptTotals();
+}
+
 function renderWorkspaceViews() {
   const project = currentProject();
   const video = currentVideo();
@@ -422,6 +470,7 @@ function renderWorkspaceViews() {
   const available = {
     project: Boolean(project),
     video: Boolean(video),
+    script: Boolean(video),
     scene: Boolean(scene)
   };
 
@@ -437,9 +486,11 @@ function renderWorkspaceViews() {
   });
   $("projectView").classList.toggle("active", studioState.activeView === "project");
   $("videoView").classList.toggle("active", studioState.activeView === "video");
+  $("scriptView").classList.toggle("active", studioState.activeView === "script");
   $("sceneView").classList.toggle("active", studioState.activeView === "scene");
   renderProjectDetails();
   renderVideoDetails();
+  renderScriptDetails();
 }
 
 function switchWorkspaceView(view) {
@@ -447,6 +498,9 @@ function switchWorkspaceView(view) {
     return;
   }
   if (!currentVideo() && view === "video") {
+    return;
+  }
+  if (!currentVideo() && view === "script") {
     return;
   }
   if (!currentScene() && view === "scene") {
@@ -686,6 +740,8 @@ async function createVideo(event) {
       platform: clean($("videoPlatform").value),
       cta: clean($("videoCta").value),
       plan: "",
+      script: "",
+      scriptCostPesos: "",
       scenes: [],
       updatedAt: now()
     };
@@ -739,6 +795,38 @@ async function saveVideoDetails(event) {
     setStatus("Video guardado.");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "No se pudo guardar el video.");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+}
+
+async function saveScriptDetails(event) {
+  event.preventDefault();
+  const button = event.submitter;
+  const originalText = button?.textContent || "";
+  const video = currentVideo();
+  if (!video) {
+    setStatus("Selecciona un video antes de guardar el guion.");
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Guardando";
+  }
+
+  try {
+    video.script = String($("videoDetailsScript").value || "").trim();
+    video.scriptCostPesos = clean($("videoDetailsScriptCost").value);
+    video.updatedAt = now();
+    await saveStudio();
+    renderProductionContext();
+    setStatus("Guion guardado.");
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "No se pudo guardar el guion.");
   } finally {
     if (button) {
       button.disabled = false;
@@ -1270,6 +1358,74 @@ function applyAssistantPrompt() {
   void saveActiveScene({ quiet: true });
 }
 
+function stripPlanMarkup(text) {
+  return String(text || "")
+    .replace(/\*\*/g, "")
+    .replace(/^[-*]\s+/, "")
+    .replace(/^["'\u2018\u2019\u201c\u201d]+|["'\u2018\u2019\u201c\u201d]+$/g, "")
+    .trim();
+}
+
+function extractVoiceoverText(line) {
+  const text = stripPlanMarkup(line);
+  const patterns = [
+    /\b(?:voz\s*en\s*off|voice\s*over|locuci(?:o|\u00f3)n|locutor|audio\s*del\s*locutor|narrador|guion\s*(?:de\s*)?(?:voz|locutor)?)\b\s*[:\-]\s*(.+)$/i,
+    /\b(?:dice|dialogo|di(?:a|\u00e1)logo|texto\s*hablado)\b\s*[:\-]\s*(.+)$/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return stripPlanMarkup(match[1]);
+    }
+  }
+
+  return "";
+}
+
+function extractScriptFromVideoPlan(plan) {
+  const entries = [];
+  let currentSceneNumber = 0;
+
+  String(plan || "")
+    .split("\n")
+    .map(stripPlanMarkup)
+    .filter(Boolean)
+    .forEach((line) => {
+      const sceneMatch = line.match(/^(?:#{1,6}\s*)?(?:e|escena)\s*0*(\d+)\b[:.\-\s]*(.*)$/i);
+      if (sceneMatch) {
+        currentSceneNumber = Number(sceneMatch[1]);
+        const inlineText = extractVoiceoverText(sceneMatch[2] || "");
+        if (inlineText) {
+          entries.push({ sceneNumber: currentSceneNumber, text: inlineText });
+          return;
+        }
+      }
+
+      if (!currentSceneNumber) {
+        return;
+      }
+
+      const voiceText = extractVoiceoverText(line);
+      if (voiceText) {
+        entries.push({ sceneNumber: currentSceneNumber, text: voiceText });
+      }
+    });
+
+  const seen = new Set();
+  return entries
+    .filter(({ sceneNumber, text }) => {
+      const key = `${sceneNumber}:${text}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .map(({ sceneNumber, text }) => `E${sceneNumber}: ${text}`)
+    .join("\n\n");
+}
+
 async function applyAssistantVideoPlan(plan) {
   const video = currentVideo();
   if (!video || !plan) {
@@ -1277,6 +1433,10 @@ async function applyAssistantVideoPlan(plan) {
   }
 
   video.plan = String(plan).trim();
+  const extractedScript = extractScriptFromVideoPlan(video.plan);
+  if (extractedScript && !clean(video.script)) {
+    video.script = extractedScript;
+  }
   video.updatedAt = now();
   try {
     await saveStudio();
@@ -1590,6 +1750,11 @@ async function init() {
   $("videoDetailsForm").addEventListener("submit", (event) => {
     void saveVideoDetails(event);
   });
+  $("scriptDetailsForm").addEventListener("submit", (event) => {
+    void saveScriptDetails(event);
+  });
+  $("videoDetailsScript").addEventListener("input", renderScriptTotals);
+  $("videoDetailsScriptCost").addEventListener("input", renderScriptTotals);
   $("createVideoPlanBtn").addEventListener("click", beginVideoPlanWithAssistant);
   $("editProjectTabBtn").addEventListener("click", openProjects);
   document.querySelectorAll("[data-workspace-view]").forEach((button) => {
