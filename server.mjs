@@ -142,6 +142,17 @@ function sendError(response, error, fallbackMessage) {
   });
 }
 
+function staticCacheControl(filePath) {
+  const extension = extname(filePath);
+  if (extension === ".html") {
+    return "no-store";
+  }
+  if (extension === ".js" || extension === ".css") {
+    return "no-cache";
+  }
+  return "public, max-age=3600";
+}
+
 function safeCompare(left, right) {
   const leftBuffer = Buffer.from(String(left));
   const rightBuffer = Buffer.from(String(right));
@@ -740,7 +751,7 @@ async function serveStatic(request, response) {
     response.writeHead(200, {
       ...responseHeaders(),
       "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream",
-      "Cache-Control": extname(filePath) === ".html" ? "no-store" : "public, max-age=3600"
+      "Cache-Control": staticCacheControl(filePath)
     });
     response.end(request.method === "HEAD" ? undefined : data);
   } catch {
